@@ -28,7 +28,6 @@
     overflow: hidden;
   }
 
-  /* ---------- LANDING SCREEN (before camera opens) ---------- */
   #landing {
     position: fixed;
     inset: 0;
@@ -85,7 +84,6 @@
     letter-spacing: 1px;
   }
 
-  /* ---------- SCAN GUIDANCE OVERLAY ---------- */
   #scanOverlay {
     position: fixed;
     top: 24px;
@@ -101,7 +99,6 @@
     display: none;
   }
 
-  /* ---------- INFO PANEL (shown when a hotspot is tapped) ---------- */
   #infoPanel {
     position: fixed;
     bottom: 0;
@@ -141,12 +138,28 @@
     color: #999;
   }
 
-  a-scene { width: 100vw; height: 100vh; }
+  #errorBox {
+    position: fixed;
+    top: 24px;
+    left: 16px;
+    right: 16px;
+    z-index: 30;
+    background: #7a2e2e;
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    display: none;
+  }
+
+  a-scene { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1; }
 </style>
 </head>
 <body>
 
-<!-- Landing screen: explains what to do before requesting camera permission -->
+<div id="errorBox"></div>
+
 <div id="landing">
   <div class="names">Amara &amp; Julian</div>
   <h1>Bring Our Invitation to Life</h1>
@@ -163,10 +176,11 @@
   <p id="infoBody">Body</p>
 </div>
 
-<!-- 
-  MindAR scene. imageTargetSrc points to a .mind file — a compiled tracking 
+<!--
+  MindAR scene. imageTargetSrc points to a .mind file — a compiled tracking
   profile generated from YOUR invitation image (instructions in README.md).
-  Placeholder target file: assets/targets/invitation.mind
+  Currently using MindAR's example test target so you can verify the camera
+  works before compiling your own.
 -->
 <a-scene
   id="scene"
@@ -175,7 +189,6 @@
   renderer="colorManagement: true, physicallyCorrectLights"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false"
-  style="display:none;"
 >
   <a-assets>
     <a-mixin id="pulse" animation="property: scale; to: 1.15 1.15 1.15; dir: alternate; loop: true; dur: 900; easing: easeInOutSine"></a-mixin>
@@ -185,7 +198,6 @@
 
   <a-entity mindar-image-target="targetIndex: 0">
 
-    <!-- Hotspot 1: floating heading that rises above the invitation -->
     <a-entity
       class="tappable"
       geometry="primitive: plane; width: 0.5; height: 0.18"
@@ -197,7 +209,6 @@
       data-body="We met on a rainy Tuesday in a bookstore that neither of us actually meant to walk into. Five years, two dogs, and one very persistent proposal later — here we are."
     ></a-entity>
 
-    <!-- Hotspot 2: ceremony details, positioned to the left -->
     <a-entity
       class="tappable"
       geometry="primitive: circle; radius: 0.09"
@@ -208,7 +219,6 @@
       data-body="Saturday, October 17th at 4:00 PM. Willowbrook Gardens, 128 Meadow Lane. Doors open at 3:30 — arrive early to grab a seat under the big oak."
     ></a-entity>
 
-    <!-- Hotspot 3: reception / RSVP, positioned to the right -->
     <a-entity
       class="tappable"
       geometry="primitive: circle; radius: 0.09"
@@ -229,27 +239,60 @@
   const infoPanel = document.getElementById('infoPanel');
   const infoTitle = document.getElementById('infoTitle');
   const infoBody = document.getElementById('infoBody');
+  const errorBox = document.getElementById('errorBox');
 
-  document.getElementById('startBtn').addEventListener('click', async () => {
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = 'block';
+  }
+
+  function startAR() {
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+      showError('This page must be loaded over HTTPS for the camera to work.');
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showError('This browser does not support camera access.');
+      return;
+    }
+    if (typeof AFRAME === 'undefined') {
+      showError('A-Frame failed to load (check your internet connection or ad blocker).');
+      return;
+    }
+
     landing.style.display = 'none';
-    scene.style.display = 'block';
     scanOverlay.style.display = 'block';
 
-    scene.addEventListener('loaded', () => {
-      const arSystem = scene.systems['mindar-image'];
-      arSystem.start(); // requests camera permission and begins tracking
-    });
+    const start = () => {
+      try {
+        const system = scene.systems['mindar-image'];
+        if (!system) {
+          showError('AR system did not initialize. Try reloading the page.');
+          return;
+        }
+        system.start(); // this is what requests camera permission
+      } catch (err) {
+        showError('AR failed to start: ' + err.message);
+      }
+    };
 
     if (scene.hasLoaded) {
-      scene.systems['mindar-image'].start();
+      start();
+    } else {
+      scene.addEventListener('loaded', start, { once: true });
     }
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startAR);
+
+  window.addEventListener('unhandledrejection', (e) => {
+    const reason = e.reason && e.reason.message ? e.reason.message : e.reason;
+    showError('AR error: ' + reason + '. This usually means assets/targets/invitation.mind failed to load — check the file exists at that exact path in your repo.');
   });
 
-  // Hide the "point camera" hint once the target is found; show it again if lost
   scene.addEventListener('targetFound', () => { scanOverlay.style.display = 'none'; });
   scene.addEventListener('targetLost', () => { scanOverlay.style.display = 'block'; });
 
-  // Tap handling for each hotspot
   document.querySelectorAll('.tappable').forEach(el => {
     el.addEventListener('click', () => {
       infoTitle.textContent = el.dataset.title;
