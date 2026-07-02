@@ -11,6 +11,22 @@ animated, tappable content float above it.
 
 ---
 
+## Test the camera first, before using your own invitation
+
+`assets/targets/invitation.mind` currently contains MindAR's own example
+target (a working test file), and `assets/targets/test-card.png` is the
+matching image. **Before wiring up your real invitation:**
+
+1. Push this as-is to GitHub Pages.
+2. Open the site on your phone, tap "Open Camera."
+3. Point your phone at `assets/targets/test-card.png` (open it on a second
+   screen, or print it) — you should see the three hotspots appear.
+
+If this works, your hosting/camera setup is fine and any future issue is
+about your own `.mind` file. If it doesn't work, you'll now get a specific
+on-screen error message (camera blocked, not HTTPS, etc.) instead of a
+silent failure — screenshot that message if you need more help.
+
 ## Step 1 — Turn your invitation into a trackable target
 
 MindAR needs a `.mind` file trained on your actual invitation design.
