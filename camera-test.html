@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Camera Test</title>
+<style>
+  body { margin: 0; background: #111; color: #fff; font-family: sans-serif; }
+  #status {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    padding: 14px; font-size: 14px; line-height: 1.5;
+    background: rgba(0,0,0,0.7); white-space: pre-wrap;
+  }
+  video { width: 100vw; height: 100vh; object-fit: cover; }
+  button {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 10; padding: 14px 28px; font-size: 16px; border: none;
+    border-radius: 999px; background: #b58b46; color: #111;
+  }
+</style>
+</head>
+<body>
+
+<div id="status">Tap the button to test camera access.</div>
+<video id="video" autoplay playsinline muted></video>
+<button id="btn">Open Camera</button>
+
+<script>
+  const statusEl = document.getElementById('status');
+  const video = document.getElementById('video');
+  const btn = document.getElementById('btn');
+
+  function log(msg) {
+    statusEl.textContent = msg;
+  }
+
+  btn.addEventListener('click', async () => {
+    log('Requesting camera...');
+
+    log('Protocol: ' + location.protocol + '\nHost: ' + location.hostname);
+
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+      log('BLOCKED: page is not HTTPS. Camera access requires https://\nCurrent URL protocol: ' + location.protocol);
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      log('BLOCKED: this browser does not support camera access at all (navigator.mediaDevices missing). Try a different/updated browser.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      video.srcObject = stream;
+      log('Camera opened successfully.');
+      btn.style.display = 'none';
+    } catch (err) {
+      log('ERROR (' + err.name + '): ' + err.message);
+    }
+  });
+</script>
+
+</body>
+</html>
